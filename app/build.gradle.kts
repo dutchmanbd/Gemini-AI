@@ -71,6 +71,7 @@ android {
 dependencies {
 
     implementation(libs.bundles.androidx)
+    implementation(libs.androidx.security.crypto)
 
     ksp(libs.androidx.hilt.compiler)
     kapt(libs.hilt.android.compiler)

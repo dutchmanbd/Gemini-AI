@@ -4,6 +4,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,24 +38,30 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootNavGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ticonsys.geminiai.domain.models.Chat
-import com.ticonsys.geminiai.domain.utils.toBitmap
+import com.ticonsys.geminiai.presentation.features.components.ImageItem
 import com.ticonsys.geminiai.presentation.features.components.TypewriterText
+import com.ticonsys.geminiai.presentation.features.destinations.SettingScreenDestination
 import kotlinx.coroutines.delay
 
 @OptIn(
@@ -66,7 +77,7 @@ fun ChattingScreen(
 
     val viewModel = hiltViewModel<ChattingViewModel>()
 
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -79,7 +90,6 @@ fun ChattingScreen(
         if (state.chats.isNotEmpty()) {
             chatListState.animateScrollToItem(state.chats.size)
         }
-
     }
 
     val pickFileLauncher =
@@ -88,10 +98,7 @@ fun ChattingScreen(
                 5
             )
         ) { uris ->
-            val images = uris.mapNotNull { context.toBitmap(it) }
-            if (images.isNotEmpty()) {
-                viewModel.onEvent(ChatEvent.OnImageSelected(images))
-            }
+            viewModel.onEvent(ChatEvent.OnImageSelected(uris))
         }
 
     Scaffold(
@@ -99,6 +106,18 @@ fun ChattingScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(text = "Genimi AI")
+                },
+                actions = {
+                    IconButton(onClick = {
+                        navigator.navigate(
+                            SettingScreenDestination
+                        )
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings"
+                        )
+                    }
                 }
             )
         }
@@ -136,7 +155,15 @@ fun ChattingScreen(
                         is Chat.Answer -> {
                             if (chat.message.isNotEmpty()) {
                                 TypewriterText(
-                                    chat.message
+                                    message = chat.message,
+                                    isAnimated = !chat.isAnimationComplete,
+                                    onCompleteAnimation = {
+                                        viewModel.onEvent(
+                                            ChatEvent.OnCompleteAnimation(
+                                                chat.copy(isAnimationComplete = true)
+                                            )
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -150,12 +177,17 @@ fun ChattingScreen(
 
                                 FlowRow {
                                     chat.images.forEachIndexed { index, bitmap ->
-                                        Image(
+                                        ImageItem(
                                             bitmap = bitmap.asImageBitmap(),
                                             contentDescription = "Image: $index",
                                             modifier = Modifier
                                                 .height(50.dp)
                                                 .width(50.dp)
+                                                .clickable {
+                                                    viewModel.onEvent(
+                                                        ChatEvent.OnShowPreview(bitmap)
+                                                    )
+                                                }
                                         )
                                     }
                                 }
@@ -183,14 +215,33 @@ fun ChattingScreen(
                     )
                     .align(alignment = Alignment.BottomCenter),
             ) {
+                if (state.error != null) {
+                    state.error?.let { text ->
+                        Text(
+                            text = text.asString(context),
+                            color = MaterialTheme.colorScheme.error,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
                 FlowRow {
                     state.images.forEachIndexed { index, bitmap ->
-                        Image(
+                        ImageItem(
                             bitmap = bitmap.asImageBitmap(),
                             contentDescription = "Image: $index",
                             modifier = Modifier
-                                .height(60.dp)
-                                .width(60.dp)
+                                .height(90.dp)
+                                .width(90.dp)
+                                .clickable {
+                                    viewModel.onEvent(
+                                        ChatEvent.OnShowPreview(bitmap)
+                                    )
+                                },
+                            onRemove = {
+                                viewModel.onEvent(ChatEvent.OnRemoveImage(index))
+                            }
                         )
                     }
                 }
@@ -250,6 +301,45 @@ fun ChattingScreen(
             }
 
 
+        }
+    }
+
+    if (state.previewBitmap != null) {
+        Dialog(
+            onDismissRequest = {
+                viewModel.onEvent(ChatEvent.OnDismissPreview)
+            },
+            properties = DialogProperties(
+
+            )
+        ) {
+            Box(
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    bitmap = state.previewBitmap!!.asImageBitmap(),
+                    contentDescription = "Bitmap",
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier
+                        .height(150.dp)
+                )
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .clip(CircleShape)
+                        .background(
+                            color = MaterialTheme.colorScheme.background
+                        )
+                        .clickable {
+                            viewModel.onEvent(ChatEvent.OnDismissPreview)
+                        }
+                ) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                }
+
+
+            }
         }
     }
 }

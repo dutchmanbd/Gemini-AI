@@ -11,7 +11,8 @@ sealed class Chat {
     ) : Chat()
 
     data class Answer(
-        val message: String
+        val message: String,
+        val isAnimationComplete: Boolean
     ) : Chat()
 
 

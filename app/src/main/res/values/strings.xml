@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Gemini AI</string>
+    <string name="type_message">Type your question</string>
+    <string name="speaking">Speaking</string>
+    <string name="image_size">Image Size</string>
+    <string name="image_size_small">Small</string>
+    <string name="image_size_medium">Medium</string>
+    <string name="image_size_large">Large</string>
 </resources>

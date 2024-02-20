@@ -10,9 +10,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
+import com.ticonsys.geminiai.R
 import com.ticonsys.geminiai.di.annotation.Pro
 import com.ticonsys.geminiai.di.annotation.Vision
 import com.ticonsys.geminiai.domain.models.Chat
+import com.ticonsys.geminiai.domain.utils.BitmapExtractor
+import com.ticonsys.geminiai.domain.utils.SettingsProvider
+import com.ticonsys.geminiai.domain.utils.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +30,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ChattingViewModel @Inject constructor(
     application: Application,
+    val settingsProvider: SettingsProvider,
+    private val bitmapExtractor: BitmapExtractor,
     @Pro private val geminiPro: GenerativeModel,
     @Vision private val geminiProVision: GenerativeModel,
 ) : AndroidViewModel(application) {
@@ -81,8 +87,21 @@ class ChattingViewModel @Inject constructor(
     fun onEvent(event: ChatEvent) {
         when (event) {
             is ChatEvent.OnImageSelected -> {
+                val images = event.imageUris.map {
+                    bitmapExtractor.compressBitmap(it)
+                }
+                if (event.imageUris.isNotEmpty()) {
+                    _uiState.update { state ->
+                        state.copy(images = images)
+                    }
+                }
+            }
+
+            is ChatEvent.OnRemoveImage -> {
+                val images = uiState.value.images.toMutableList()
+                images.removeAt(event.index)
                 _uiState.update { state ->
-                    state.copy(images = event.images)
+                    state.copy(images = images)
                 }
             }
 
@@ -94,9 +113,32 @@ class ChattingViewModel @Inject constructor(
                 }
             }
 
+
 //            is ChatEvent.Speak -> {
 //                speak(event.message)
 //            }
+
+            is ChatEvent.OnShowPreview -> {
+                _uiState.update { state ->
+                    state.copy(previewBitmap = event.bitmap)
+                }
+            }
+
+            is ChatEvent.OnCompleteAnimation -> {
+                val chats = uiState.value.chats.toMutableList()
+                chats.removeLast()
+                chats.add(event.answer)
+                _uiState.update { state ->
+                    state.copy(chats = chats)
+                }
+            }
+
+            ChatEvent.OnDismissPreview -> {
+                _uiState.update { state ->
+                    state.copy(previewBitmap = null)
+                }
+            }
+
 
             ChatEvent.Submit -> {
                 submitQuestion()
@@ -106,6 +148,11 @@ class ChattingViewModel @Inject constructor(
 
     private fun submitQuestion() {
         if (uiState.value.question.isEmpty()) {
+            _uiState.update { state ->
+                state.copy(
+                    error = UiText.StringResource(id = R.string.type_message)
+                )
+            }
             return
         }
 
@@ -131,36 +178,47 @@ class ChattingViewModel @Inject constructor(
                 chats = chats,
                 isLoading = true,
                 question = "",
-                images = emptyList()
+                images = emptyList(),
+                error = null,
             )
         }
 
 
         viewModelScope.launch(Dispatchers.IO) {
-            val response =
-                if (!isImageExists)
-                    geminiPro.generateContent(inputContent)
-                else
-                    geminiProVision.generateContent(
-                        inputContent
-                    )
+            try {
+                val response =
+                    if (!isImageExists)
+                        geminiPro.generateContent(inputContent)
+                    else
+                        geminiProVision.generateContent(
+                            inputContent
+                        )
 
 
-            val message = response.text ?: ""
-            if (message.isNotEmpty()) {
-                val chats = uiState.value.chats.toMutableList()
-                chats.add(
-                    Chat.Answer(
-                        response.text ?: ""
+                val message = response.text ?: ""
+                if (message.isNotEmpty()) {
+                    val chats = uiState.value.chats.toMutableList()
+                    chats.add(
+                        Chat.Answer(
+                            message = response.text ?: "",
+                            isAnimationComplete = false,
+                        )
                     )
-                )
+                    _uiState.update { state ->
+                        state.copy(
+                            chats = chats,
+                            isLoading = false,
+                        )
+                    }
+                    speak(message)
+                }
+            } catch (e: Exception) {
                 _uiState.update { state ->
                     state.copy(
-                        chats = chats,
                         isLoading = false,
+                        error = UiText.DynamicString(e.message ?: "Unknown error occurred")
                     )
                 }
-                speak(message)
             }
         }
 
@@ -168,14 +226,16 @@ class ChattingViewModel @Inject constructor(
 
 
     private fun speak(message: String) {
-        val regex = Regex("[*!#]")
-        val clearedMessage = message.replace(regex, "")
-        tts?.speak(
-            clearedMessage,
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            "${System.currentTimeMillis()}"
-        )
+        if (settingsProvider.isSpeaking()) {
+            val regex = Regex("[*!#]")
+            val clearedMessage = message.replace(regex, "")
+            tts?.speak(
+                clearedMessage,
+                TextToSpeech.QUEUE_FLUSH,
+                null,
+                "${System.currentTimeMillis()}"
+            )
+        }
     }
 
     override fun onCleared() {

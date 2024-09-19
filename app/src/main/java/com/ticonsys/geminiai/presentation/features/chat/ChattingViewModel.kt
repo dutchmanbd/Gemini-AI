@@ -33,7 +33,7 @@ class ChattingViewModel @Inject constructor(
     val settingsProvider: SettingsProvider,
     private val bitmapExtractor: BitmapExtractor,
     @Pro private val geminiPro: GenerativeModel,
-    @Vision private val geminiProVision: GenerativeModel,
+//    @Vision private val geminiProVision: GenerativeModel,
 ) : AndroidViewModel(application) {
 
     private var tts: TextToSpeech? = null
@@ -186,15 +186,7 @@ class ChattingViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val response =
-                    if (!isImageExists)
-                        geminiPro.generateContent(inputContent)
-                    else
-                        geminiProVision.generateContent(
-                            inputContent
-                        )
-
-
+                val response = geminiPro.generateContent(inputContent)
                 val message = response.text ?: ""
                 if (message.isNotEmpty()) {
                     val chats = uiState.value.chats.toMutableList()

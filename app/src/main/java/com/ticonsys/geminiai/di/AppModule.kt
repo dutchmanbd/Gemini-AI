@@ -38,17 +38,17 @@ object AppModule {
     @Singleton
     fun provideGeminiPro(
     ): GenerativeModel = GenerativeModel(
-        modelName = "gemini-pro",
+        modelName = "gemini-1.5-pro",
         apiKey = BuildConfig.API_KEY
     )
 
-    @Vision
-    @Provides
-    @Singleton
-    fun provideGeminiProVision(
-    ): GenerativeModel = GenerativeModel(
-        modelName = "gemini-pro-vision",
-        apiKey = BuildConfig.API_KEY
-    )
+//    @Vision
+//    @Provides
+//    @Singleton
+//    fun provideGeminiProVision(
+//    ): GenerativeModel = GenerativeModel(
+//        modelName = "gemini-pro-vision",
+//        apiKey = BuildConfig.API_KEY
+//    )
 
 }

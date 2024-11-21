@@ -1,33 +1,34 @@
 [versions]
-android-gradle = "8.2.0"
-android-kotlin = "1.9.0"
-androidx-activity-compose = "1.8.2"
-androidx-appcompat = "1.6.1"
-androidx-core-ktx = "1.12.0"
-androidx-lifecycle-runtime-ktx = "2.6.2"
+android-gradle = "8.7.2"
+android-kotlin = "2.0.10"
+androidx-activity-compose = "1.9.3"
+androidx-appcompat = "1.7.0"
+androidx-core-ktx = "1.15.0"
+androidx-lifecycle-runtime-ktx = "2.8.7"
 
-androidx-hilt = "1.1.0"
+androidx-hilt = "1.2.0"
 
-androidx-navigation = "2.7.6"
+androidx-navigation = "2.8.4"
 androidx-security-crypto = "1.0.0"
 
-compose-bom = "2023.10.01"
-compose-navigation = "1.9.55"
-coil = "2.4.0"
+compose-bom = "2024.11.00"
+compose-navigation = "1.10.2"
+coil = "2.6.0"
 
-ksp = "1.9.22-1.0.16"
+ksp = "2.0.10-1.0.24"
 
-hilt-android = "2.48"
+hilt-android = "2.51.1"
 
-generative-ai = "0.1.1"
+generative-ai = "0.9.0"
 
 collections-immutable = "0.3.6"
 highlightjs-android = "1.5.0"
+markdown-view = "0.3.2"
 
 
 junit = "4.13.2"
-junit-android = "1.1.5"
-espresso = "3.5.1"
+junit-android = "1.2.1"
+espresso = "3.6.1"
 
 
 [libraries]
@@ -77,6 +78,7 @@ generative-ai = { module = "com.google.ai.client.generativeai:generativeai", ver
 
 collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "collections-immutable" }
 highlightjs-android = { module = "com.pddstudio:highlightjs-android", version.ref = "highlightjs-android" }
+markdown-view = { module = "com.colintheshots:twain", version.ref = "markdown-view" }
 
 
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -131,3 +133,4 @@ devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 android-library = { id = "com.android.library", version.ref = "android-gradle" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "android-kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "android-kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "android-kotlin" }

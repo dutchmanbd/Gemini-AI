@@ -1,11 +1,11 @@
 package com.ticonsys.geminiai.presentation.features.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
+import com.colintheshots.twain.MarkdownText
 import kotlinx.coroutines.delay
 
 @Composable
@@ -29,9 +29,16 @@ fun TypewriterText(
         }
     }
 
-    Text(
-        text = message.take(currentCharacterIndex),
+    MarkdownText(
+        markdown = message.take(currentCharacterIndex),
         modifier = Modifier.fillMaxWidth(),
         style = textStyle,
     )
+
+//    Text(
+//        text = message.take(currentCharacterIndex),
+//        modifier = Modifier.fillMaxWidth(),
+//        fontFamily = FontFamily.Monospace,
+//        style = textStyle,
+//    )
 }
